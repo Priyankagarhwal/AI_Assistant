@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual Environment
+backend/venv/
+backend/.venv/
+
+# Environment variables (NEVER push this)
+backend/.env
+
+# Database
+backend/*.db
+backend/knowledgehub.db
+
+# Uploads (user files)
+backend/uploads/
+
+# ChromaDB storage
+backend/storage/
+
+# Logs
+backend/logs/
+
+# Node
+frontend/node_modules/
+
+# Vite build
+frontend/dist/
+
+# OS
+.DS_Store
+Thumbs.db
