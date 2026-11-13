@@ -1,9 +1,13 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, ForeignKey, String
 from sqlalchemy.orm import relationship
 
 from app.database.database import Base
+
+
+def _utcnow():
+    return datetime.now(timezone.utc)
 
 
 class Workspace(Base):
@@ -12,18 +16,13 @@ class Workspace(Base):
     workspace_id = Column(String, primary_key=True, index=True)
     name = Column(String, nullable=False)
     description = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
 
     documents = relationship(
-        "Document",
-        back_populates="workspace",
-        cascade="all, delete"
+        "Document", back_populates="workspace", cascade="all, delete-orphan"
     )
-
     chats = relationship(
-        "ChatHistory",
-        back_populates="workspace",
-        cascade="all, delete"
+        "ChatHistory", back_populates="workspace", cascade="all, delete-orphan"
     )
 
 
@@ -33,40 +32,29 @@ class Document(Base):
     document_id = Column(String, primary_key=True, index=True)
     workspace_id = Column(
         String,
-        ForeignKey("workspaces.workspace_id"),
-        nullable=False
+        ForeignKey("workspaces.workspace_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
+    filename = Column(String, nullable=False)  # original name shown in the UI
+    file_path = Column(String, nullable=False)  # stored as <document_id>.pdf on disk
+    uploaded_at = Column(DateTime, default=_utcnow)
 
-    filename = Column(String, nullable=False)
-    file_path = Column(String, nullable=False)
+    workspace = relationship("Workspace", back_populates="documents")
 
-    uploaded_at = Column(DateTime, default=datetime.utcnow)
 
-    # Each document belongs to one workspace
-    workspace = relationship(
-        "Workspace",
-        back_populates="documents"
-    )
 class ChatHistory(Base):
     __tablename__ = "chat_history"
 
     chat_id = Column(String, primary_key=True, index=True)
-
     workspace_id = Column(
         String,
-        ForeignKey("workspaces.workspace_id"),
-        nullable=False
+        ForeignKey("workspaces.workspace_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
-
     question = Column(String, nullable=False)
     answer = Column(String, nullable=False)
+    created_at = Column(DateTime, default=_utcnow)
 
-    created_at = Column(
-        DateTime,
-        default=datetime.utcnow
-    )
-
-    workspace = relationship(
-        "Workspace",
-        back_populates="chats"
-    )
+    workspace = relationship("Workspace", back_populates="chats")

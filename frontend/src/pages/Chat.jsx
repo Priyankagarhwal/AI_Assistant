@@ -1,5 +1,17 @@
 import { useEffect, useState } from "react";
-import api from "../api/axios";
+import api, { errorMessage } from "../api/axios";
+
+// Build [{question, answer}] pairs from the visible conversation so the backend
+// can resolve follow-up questions ("what about its limitations?").
+function toHistory(messages) {
+  const turns = [];
+  for (let i = 0; i < messages.length - 1; i++) {
+    if (messages[i].role === "user" && messages[i + 1].role === "ai" && !messages[i + 1].error) {
+      turns.push({ question: messages[i].text, answer: messages[i + 1].text });
+    }
+  }
+  return turns.slice(-4);
+}
 
 export default function Chat() {
   const [workspaces, setWorkspaces] = useState([]);
@@ -15,18 +27,22 @@ export default function Chat() {
   const handleAsk = async (e) => {
     e.preventDefault();
     if (!workspaceId || !question.trim()) return;
-    const q = question;
+    const q = question.trim();
+    const history = toHistory(messages);
     setMessages((prev) => [...prev, { role: "user", text: q }]);
     setQuestion("");
     setLoading(true);
     try {
-      const r = await api.post("/chat/", { workspace_id: workspaceId, question: q });
+      const r = await api.post("/chat/", { workspace_id: workspaceId, question: q, history });
       setMessages((prev) => [
         ...prev,
         { role: "ai", text: r.data.answer, sources: r.data.sources },
       ]);
-    } catch {
-      setMessages((prev) => [...prev, { role: "ai", text: "Error getting response." }]);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "ai", error: true, text: errorMessage(err, "Error getting response.") },
+      ]);
     }
     setLoading(false);
   };
@@ -63,9 +79,13 @@ export default function Chat() {
             >
               {m.text}
               {m.sources && m.sources.length > 0 && (
-                <p className="mt-2 text-xs text-slate-500">
-                  Sources: {m.sources.join(", ")}
-                </p>
+                <ul className="mt-2 space-y-1 text-xs text-slate-500">
+                  {m.sources.map((s) => (
+                    <li key={s.id} title={s.snippet}>
+                      [{s.id}] {s.filename}, p. {s.page}
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           </div>

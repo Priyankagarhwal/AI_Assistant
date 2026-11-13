@@ -1,38 +1,48 @@
-import pytesseract
+"""PDF text extraction with per-page OCR fallback for scanned pages."""
+
+from typing import List, Tuple
+
 from pypdf import PdfReader
-from pdf2image import convert_from_path
-from PIL import Image
-import os
 
-# Windows pe Tesseract path
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+from app.config.settings import settings
+from app.core.logger import logger
 
-# Poppler path (pdf2image ke liye)
-POPPLER_PATH = r"C:\Program Files\poppler\Library\bin"
+# (page_number starting at 1, page_text)
+Page = Tuple[int, str]
 
 
-def load_pdf(file_path: str) -> str:
+def _ocr_page(file_path: str, page_number: int) -> str:
+    """OCR a single page. Returns "" if OCR tools are missing or OCR fails."""
+    try:
+        import pytesseract
+        from pdf2image import convert_from_path
+
+        if settings.TESSERACT_CMD:
+            pytesseract.pytesseract.tesseract_cmd = settings.TESSERACT_CMD
+
+        images = convert_from_path(
+            file_path,
+            first_page=page_number,
+            last_page=page_number,
+            poppler_path=settings.POPPLER_PATH or None,
+        )
+        return "\n".join(pytesseract.image_to_string(img) for img in images).strip()
+    except Exception as exc:  # missing binaries, corrupt image, etc.
+        # Logged, never written into the document text (it would get embedded).
+        logger.warning("OCR failed for %s page %d: %s", file_path, page_number, exc)
+        return ""
+
+
+def load_pdf(file_path: str) -> List[Page]:
+    """Return the non-empty pages of a PDF as (page_number, text) pairs."""
     reader = PdfReader(file_path)
-    text = ""
+    pages: List[Page] = []
 
-    for i, page in enumerate(reader.pages):
-        page_text = page.extract_text()
-        if page_text and page_text.strip():
-            text += page_text + "\n"
-        else:
-            # Image-based page — OCR use karo
-            try:
-                images = convert_from_path(
-                    file_path,
-                    first_page=i + 1,
-                    last_page=i + 1,
-                    poppler_path=POPPLER_PATH if os.path.exists(POPPLER_PATH) else None,
-                )
-                for img in images:
-                    ocr_text = pytesseract.image_to_string(img)
-                    if ocr_text.strip():
-                        text += ocr_text + "\n"
-            except Exception as e:
-                text += f"[Page {i+1} OCR failed: {e}]\n"
+    for index, page in enumerate(reader.pages, start=1):
+        text = (page.extract_text() or "").strip()
+        if not text and settings.ENABLE_OCR:
+            text = _ocr_page(file_path, index)
+        if text:
+            pages.append((index, text))
 
-    return text
+    return pages

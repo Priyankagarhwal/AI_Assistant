@@ -40,3 +40,10 @@ Thumbs.db
 
 # Personal notes (never push)
 PERSONAL_NOTES.md
+
+# Frontend env
+frontend/.env
+
+# Test cache
+.pytest_cache/
+backend/.pytest_cache/

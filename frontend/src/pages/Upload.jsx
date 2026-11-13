@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import api from "../api/axios";
+import api, { errorMessage } from "../api/axios";
 
 export default function Upload() {
   const [workspaces, setWorkspaces] = useState([]);
@@ -8,22 +8,29 @@ export default function Upload() {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
+  const [isError, setIsError] = useState(false);
 
   useEffect(() => {
     api.get("/workspace/").then((r) => setWorkspaces(r.data));
   }, []);
 
   useEffect(() => {
-    if (workspaceId) {
-      api.get(`/documents/${workspaceId}`).then((r) => setDocuments(r.data));
-    } else {
-      setDocuments([]);
-    }
+    if (!workspaceId) return;
+    let cancelled = false; // ignore responses for a workspace that is no longer selected
+    api.get(`/documents/${workspaceId}`).then((r) => {
+      if (!cancelled) setDocuments(r.data);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [workspaceId]);
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (!workspaceId || !file) return setMsg("Select a workspace and a PDF file.");
+    if (!workspaceId || !file) {
+      setIsError(true);
+      return setMsg("Select a workspace and a PDF file.");
+    }
     setLoading(true);
     setMsg("");
     const form = new FormData();
@@ -31,15 +38,14 @@ export default function Upload() {
     form.append("file", file);
     try {
       const r = await api.post("/upload/pdf", form);
-      if (r.data.success) {
-        setMsg(`Uploaded! ${r.data.chunks_created} chunks created.`);
-        setFile(null);
-        api.get(`/documents/${workspaceId}`).then((r) => setDocuments(r.data));
-      } else {
-        setMsg(r.data.message || "Upload failed.");
-      }
-    } catch {
-      setMsg("Upload failed.");
+      setMsg(`Uploaded! ${r.data.pages_indexed} pages, ${r.data.chunks_created} chunks indexed.`);
+      setIsError(false);
+      setFile(null);
+      e.target.reset();
+      api.get(`/documents/${workspaceId}`).then((r) => setDocuments(r.data));
+    } catch (err) {
+      setMsg(errorMessage(err, "Upload failed."));
+      setIsError(true);
     }
     setLoading(false);
   };
@@ -60,7 +66,7 @@ export default function Upload() {
         <select
           className="w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-slate-400"
           value={workspaceId}
-          onChange={(e) => setWorkspaceId(e.target.value)}
+          onChange={(e) => { setWorkspaceId(e.target.value); setDocuments([]); }}
         >
           <option value="">Select Workspace</option>
           {workspaces.map((ws) => (
@@ -82,7 +88,7 @@ export default function Upload() {
         >
           {loading ? "Uploading..." : "Upload"}
         </button>
-        {msg && <p className="text-sm text-green-600">{msg}</p>}
+        {msg && <p className={`text-sm ${isError ? "text-red-600" : "text-green-600"}`}>{msg}</p>}
       </form>
 
       {workspaceId && (

@@ -1,0 +1,9 @@
+{
+  "workspace_id": "PASTE-YOUR-WORKSPACE-ID",
+  "k": 4,
+  "questions": [
+    {"question": "What is the vanishing gradient problem?", "filename": "deep-learning.pdf", "page": 290},
+    {"question": "How does dropout reduce overfitting?", "filename": "deep-learning.pdf", "page": 258},
+    {"question": "What is the capital of Australia?", "filename": null, "page": null}
+  ]
+}

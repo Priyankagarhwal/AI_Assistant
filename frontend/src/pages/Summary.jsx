@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import api from "../api/axios";
+import api, { errorMessage } from "../api/axios";
 
 export default function Summary() {
   const [workspaces, setWorkspaces] = useState([]);
@@ -18,8 +18,8 @@ export default function Summary() {
     try {
       const r = await api.post("/summary/", { workspace_id: workspaceId });
       setSummary(r.data.summary);
-    } catch {
-      setSummary("Failed to generate summary.");
+    } catch (err) {
+      setSummary(errorMessage(err, "Failed to generate summary."));
     }
     setLoading(false);
   };

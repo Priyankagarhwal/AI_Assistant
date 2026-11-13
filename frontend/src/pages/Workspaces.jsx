@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import api from "../api/axios";
+import api, { errorMessage } from "../api/axios";
 
 export default function Workspaces() {
   const [workspaces, setWorkspaces] = useState([]);
@@ -23,14 +23,14 @@ export default function Workspaces() {
       setDescription("");
       setMsg("Workspace created!");
       fetchWorkspaces();
-    } catch {
-      setMsg("Failed to create workspace.");
+    } catch (err) {
+      setMsg(errorMessage(err, "Failed to create workspace."));
     }
     setLoading(false);
   };
 
   const handleDelete = async (id) => {
-    if (!confirm("Delete this workspace?")) return;
+    if (!confirm("Delete this workspace and all its documents and chats?")) return;
     await api.delete(`/workspace/${id}`);
     fetchWorkspaces();
   };

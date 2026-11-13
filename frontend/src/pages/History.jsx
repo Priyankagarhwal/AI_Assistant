@@ -11,11 +11,14 @@ export default function History() {
   }, []);
 
   useEffect(() => {
-    if (workspaceId) {
-      api.get(`/chat/history/${workspaceId}`).then((r) => setHistory(r.data));
-    } else {
-      setHistory([]);
-    }
+    if (!workspaceId) return;
+    let cancelled = false; // ignore responses for a workspace that is no longer selected
+    api.get(`/chat/history/${workspaceId}`).then((r) => {
+      if (!cancelled) setHistory(r.data);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [workspaceId]);
 
   return (
@@ -26,7 +29,7 @@ export default function History() {
         <select
           className="w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-slate-400"
           value={workspaceId}
-          onChange={(e) => setWorkspaceId(e.target.value)}
+          onChange={(e) => { setWorkspaceId(e.target.value); setHistory([]); }}
         >
           <option value="">Select Workspace</option>
           {workspaces.map((ws) => (

@@ -1,31 +1,25 @@
-fastapi
-uvicorn[standard]
+# API
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+pydantic-settings>=2.4
+sqlalchemy>=2.0
 
-langchain
-langchain-core
-langchain-community
-langchain-text-splitters
-langchain-groq
+# RAG
+langchain-core>=0.3
+langchain-text-splitters>=0.3
+langchain-groq>=0.2
+langchain-chroma>=0.2
+langchain-huggingface>=0.1
+chromadb>=0.5
+sentence-transformers>=3.0
 
-chromadb
+# PDF parsing + OCR (OCR also needs the Tesseract and Poppler binaries installed)
+pypdf>=4.0
+pdf2image>=1.17
+pytesseract>=0.3.10
+Pillow>=10.0
 
-sentence-transformers
-
-python-dotenv
-pydantic-settings
-python-multipart
-
-pypdf
-pdf2image
-pytesseract
-Pillow
-beautifulsoup4
-requests
-playwright
-
-aiofiles
-httpx
-tiktoken
-
-markdown
-pytest
+# Tests
+pytest>=8.0
+httpx>=0.27

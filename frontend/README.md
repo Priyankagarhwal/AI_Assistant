@@ -1,16 +1,23 @@
-# React + Vite
+# KnowledgeHub AI — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + Vite + Tailwind CSS v4 client for the KnowledgeHub AI backend.
 
-Currently, two official plugins are available:
+```bash
+npm install
+npm run dev      # http://localhost:5173
+npm run build    # production build in dist/
+npm run lint
+```
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The backend URL defaults to `http://127.0.0.1:8000`; override it with `VITE_API_URL` in `frontend/.env` (see `.env.example`).
 
-## React Compiler
+| Page | What it does |
+|---|---|
+| Dashboard | Counts of workspaces, documents and chats |
+| Workspaces | Create / delete workspaces |
+| Upload | Upload PDFs to a workspace, list and delete documents |
+| Chat | Ask questions; follow-ups use the last few turns; answers show `[n] file, p. X` sources |
+| History | Past questions and answers per workspace |
+| Summary | Map-reduce summary of a whole workspace |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+See the [root README](../README.md) for architecture and setup.

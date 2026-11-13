@@ -1,13 +1,14 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
-from app.rag.retriever import retrieve
-from app.rag.chat import ask_llm
+from app.core.logger import logger
+from app.database.database import get_db
+from app.rag.chat import LLMNotConfiguredError, summarize
+from app.rag.retriever import get_workspace_chunks
+from app.services.workspace_service import get_workspace
 
-router = APIRouter(
-    prefix="/summary",
-    tags=["Summary"]
-)
+router = APIRouter(prefix="/summary", tags=["Summary"])
 
 
 class SummaryRequest(BaseModel):
@@ -15,43 +16,22 @@ class SummaryRequest(BaseModel):
 
 
 @router.post("/")
-def generate_summary(req: SummaryRequest):
+def generate_summary(req: SummaryRequest, db: Session = Depends(get_db)):
+    if get_workspace(db, req.workspace_id) is None:
+        raise HTTPException(status_code=404, detail="Workspace not found.")
 
-    docs = retrieve(
-        workspace_id=req.workspace_id,
-        query="Summarize the complete document",
-        k=100
-    )
-
+    # A summary must cover the whole workspace, so we read every chunk in order
+    # instead of running a similarity search for the word "summarize".
+    docs = get_workspace_chunks(req.workspace_id)
     if not docs:
-        return {
-            "summary": "No documents found in this workspace."
-        }
+        return {"workspace_id": req.workspace_id, "summary": "No documents found in this workspace."}
 
-    context = "\n\n".join(
-        doc.page_content for doc in docs
-    )
+    try:
+        summary = summarize(docs)
+    except LLMNotConfiguredError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Summary failed")
+        raise HTTPException(status_code=502, detail="The language model request failed.") from exc
 
-    prompt = """
-Summarize the following documents.
-
-Provide:
-
-1. Overall Summary
-2. Key Points
-3. Important Skills (if any)
-4. Projects (if any)
-5. Important Technologies (if any)
-
-Be concise.
-"""
-
-    summary = ask_llm(
-        context=context,
-        question=prompt
-    )
-
-    return {
-        "workspace_id": req.workspace_id,
-        "summary": summary
-    }
+    return {"workspace_id": req.workspace_id, "chunks_used": len(docs), "summary": summary}
